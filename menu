@@ -1,0 +1,159 @@
+NODE_ENV_MENU_SELECTION=0
+MAIN_MENU_SELECTION=0
+
+NODE_ENV_MENU_ITEMS=("localdev"
+ "devo"
+ "beta"
+ "prod"
+)
+
+NODE_ENV_MENU_ITEMS_COUNT=${#NODE_ENV_MENU_ITEMS[@]}
+
+MAIN_MENU_ITEMS=("0) Start server"
+   "1) Build & deploy to firebase"
+   "2) Build"
+   "3) Reauth firebase"
+#  "1) Start storybook"
+#   "2) Start styleguide"
+#   "3) Analyze the bundle size"
+# "4) Start secure server"
+#   "5) Deploy to Firebase"
+#  "Build server"
+#  "Stop running server"
+#  "Connect terminal run things like db mirgrations"
+#  "Deploy server"
+#  "ngrok"
+#  "Generate & open API docs"
+#  "Lint"
+#  "Run DB create"
+#  "Tail logs"
+)
+
+MAIN_MENU_ITEMS_COUNT=${#MAIN_MENU_ITEMS[@]}
+
+moveCursorToTopOfMenu() {
+  MENU_ITEMS_COUNT=$1
+  tput cuu $MENU_ITEMS_COUNT;
+}
+
+displayMenu()
+{
+  ARGS=("$@")
+  CURRENT_INDEX=${ARGS[0]}
+  MENU_ITEMS=("${ARGS[@]:1}")
+  MENU_ITEMS_COUNT=${#MENU_ITEMS[@]}
+
+  for (( i=0; i<${MENU_ITEMS_COUNT}; i++ ));
+  do
+    if [ $i == $CURRENT_INDEX ]
+    then
+      echo "> " ${MENU_ITEMS[$i]}
+    else
+      echo "  " ${MENU_ITEMS[$i]}
+    fi
+  done
+}
+
+displayMainMenu() {
+  displayMenu $MAIN_MENU_SELECTION "${MAIN_MENU_ITEMS[@]}";
+}
+
+displayNodeEnvMenu() {
+  displayMenu $NODE_ENV_MENU_SELECTION "${NODE_ENV_MENU_ITEMS[@]}";
+}
+
+promptForMainMenu() {
+  while true
+  do
+      read -r -sn1 t
+
+      case $t in
+          A) moveCursorToTopOfMenu $MAIN_MENU_ITEMS_COUNT;
+              if [[ $MAIN_MENU_SELECTION -gt 0 ]]; then
+                 ((MAIN_MENU_SELECTION=MAIN_MENU_SELECTION-1))
+              fi;
+              displayMainMenu;;
+          B) moveCursorToTopOfMenu $MAIN_MENU_ITEMS_COUNT;
+              if [[ $MAIN_MENU_SELECTION -lt $(($MAIN_MENU_ITEMS_COUNT - 1)) ]]; then
+                 ((MAIN_MENU_SELECTION=MAIN_MENU_SELECTION+1))
+              fi;
+              displayMainMenu;;
+          '') break ;;
+      esac
+  done
+}
+
+promptForNodeEnvMenu() {
+  while true
+  do
+      read -r -sn1 t
+
+      case $t in
+          A) moveCursorToTopOfMenu $NODE_ENV_MENU_ITEMS_COUNT;
+              if [[ $NODE_ENV_MENU_SELECTION -gt 0 ]]; then
+                 ((NODE_ENV_MENU_SELECTION=NODE_ENV_MENU_SELECTION-1))
+              fi;
+              displayNodeEnvMenu;;
+          B) moveCursorToTopOfMenu $NODE_ENV_MENU_ITEMS_COUNT;
+              if [[ $NODE_ENV_MENU_SELECTION -lt $(($NODE_ENV_MENU_ITEMS_COUNT - 1)) ]]; then
+                 ((NODE_ENV_MENU_SELECTION=NODE_ENV_MENU_SELECTION+1))
+              fi;
+              displayNodeEnvMenu;;
+          '') break ;;
+      esac
+  done
+}
+
+tailLogs() {
+  case $NODE_ENV_MENU_SELECTION in
+    0 ) docker-compose logs -f --tail 200;;
+    1 ) awslogs get /aws/elasticbeanstalk/TapeServer-Api-DEVO/var/log/eb-docker/containers/eb-current-app/stdouterr.log --watch;;
+    2 ) awslogs get /aws/elasticbeanstalk/TapeServer-Api-BETA/var/log/eb-docker/containers/eb-current-app/stdouterr.log --watch;;
+    3 ) awslogs get /aws/elasticbeanstalk/TapeServer-Api-PROD/var/log/eb-docker/containers/eb-current-app/stdouterr.log --watch;;
+  esac
+}
+
+# echo "█████████████████████████████████████████████"
+# echo "██ Select Node Enviornment (Press Up/Down) ██"
+# echo "█████████████████████████████████████████████"
+# displayNodeEnvMenu
+# promptForNodeEnvMenu
+
+echo "█████████████████████████████████████████████"
+echo "██ Select Command (Press Up/Down)          ██"
+echo "█████████████████████████████████████████████"
+displayMainMenu
+promptForMainMenu
+
+ENV=${NODE_ENV_MENU_ITEMS[$NODE_ENV_MENU_SELECTION]}
+
+echo "█████████████████████████████████████████████"
+echo "██ Executing...                            ██"
+echo "█████████████████████████████████████████████"
+
+
+
+case $MAIN_MENU_SELECTION in
+   0 ) npm run dev;;
+   1 ) npm run build; firebase deploy;;
+   2 ) npm run build;;
+   3 ) firebase login --reauth;;
+#   1 ) npm run build; npm run analyze;;
+#   1 ) yarn storybook;;
+#   2 ) npm run styleguide;;
+#   3 ) npm run build; npm run analyze;;
+#   4 ) HTTPS=true npm start;;
+#   5 ) npm run deploy;;
+
+#  0 ) NODE_ENV=$ENV ./bin/docker-start.sh;;
+#  1 ) NODE_ENV=$ENV ./bin/docker-build.sh;;
+#  2 ) ./bin/docker-stop.sh;;
+#  3 ) ./bin/docker-shell.sh;;
+#  4 ) NODE_ENV=$ENV ./bin/deploy.sh;;
+#  5 ) ngrok http 8080;;
+#  6 ) npm run apidoc;;
+#  7 ) npm run precommit;;
+#  8 ) NODE_ENV=$ENV node scripts/dbcreate.js;;
+#  9 ) tailLogs;;
+esac
+
